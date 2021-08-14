@@ -1,43 +1,60 @@
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 
-static void destroyWinCb(GtkWidget* widget, GtkWidget* window)
+static void destroy_win_cb(GtkWidget* widget, GtkWidget* window)
 {
     gtk_main_quit();
 }
 
-static gboolean closeWebCb(WebKitWebView* webView, GtkWidget* window)
+static gboolean close_web_cb(WebKitWebView* webView, GtkWidget* window)
 {
     gtk_widget_destroy(window);
     return TRUE;
 }
 
+static void uri_scheme_request_cb (WebKitURISchemeRequest *request, gpointer user_data)
+{
+    GInputStream *stream;
+    gsize         stream_length;
+
+    gchar *contents;
+    contents = g_strdup_printf ("<html><body><p>Example html page</p></body></html>");
+    stream_length = strlen (contents);
+    stream = g_memory_input_stream_new_from_data (contents, stream_length, g_free);
+
+    webkit_uri_scheme_request_finish (request, stream, stream_length, "text/html");
+    g_object_unref (stream);
+}
+
 int main(int argc, char* argv[])
 {
-    GtkWidget *win;
-    WebKitWebView *web;
-    gchar * url = "http://www.google.fr/";
- 
     gtk_init(&argc, &argv);
-
+    gchar *url = "gtk://index.html";
     if (argc == 2)
-        url = argv[1];
+	url = argv[1];
 
-    win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_default_size(GTK_WINDOW(win), 1280, 720);
+    WebKitWebContext *ctx;
+    ctx = webkit_web_context_new();
+    webkit_web_context_register_uri_scheme(ctx, "gtk", (WebKitURISchemeRequestCallback)uri_scheme_request_cb, NULL, NULL);
+    for (int i = 0; i < 10; i++) {
+	GtkWidget *win;
+	WebKitWebView *web;
 
-    web = WEBKIT_WEB_VIEW(webkit_web_view_new());
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_default_size(GTK_WINDOW(win), 200, 200);
 
-    gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(web));
+	web = WEBKIT_WEB_VIEW(webkit_web_view_new_with_context(ctx));
 
-    g_signal_connect(win, "destroy", G_CALLBACK(destroyWinCb), NULL);
-    g_signal_connect(web, "close", G_CALLBACK(closeWebCb), win);
+	gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(web));
 
-    webkit_web_view_load_uri(web, url);
+	g_signal_connect(win, "destroy", G_CALLBACK(destroy_win_cb), NULL);
+	g_signal_connect(web, "close", G_CALLBACK(close_web_cb), win);
 
-    gtk_widget_grab_focus(GTK_WIDGET(web));
+	webkit_web_view_load_uri(web, url);
 
-    gtk_widget_show_all(win);
+	gtk_widget_grab_focus(GTK_WIDGET(web));
+	gtk_widget_show_all(win);
+    }
 
     gtk_main();
 
