@@ -29,6 +29,9 @@ static void uri_scheme_request_cb (WebKitURISchemeRequest *request, gpointer use
 int main(int argc, char* argv[])
 {
     gtk_init(&argc, &argv);
+    printf("%d\n", webkit_get_major_version());
+    printf("%d\n", webkit_get_minor_version());
+    printf("%d\n", webkit_get_micro_version());
     gchar *url = "gtk://index.html";
     if (argc == 2)
 	url = argv[1];
@@ -46,6 +49,9 @@ int main(int argc, char* argv[])
     gtk_window_set_default_size(GTK_WINDOW(win), 800, 600);
 
     web = WEBKIT_WEB_VIEW(webkit_web_view_new_with_context(ctx));
+    const char * const t[1] = {"gtk://*"};
+    webkit_web_view_set_cors_allowlist(web, t);
+
     // Enable devtool
     WebKitSettings *settings = webkit_web_view_get_settings (web);
     webkit_settings_set_enable_developer_extras(settings, true);
