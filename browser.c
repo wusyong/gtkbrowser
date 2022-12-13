@@ -14,23 +14,30 @@ static gboolean close_web_cb(WebKitWebView* webView, GtkWidget* window)
 
 static void uri_scheme_request_cb (WebKitURISchemeRequest *request, gpointer user_data)
 {
-    GInputStream *stream;
-    gsize         stream_length;
+    // TODO Better video file
+    char path[256] = "/home/wusyong/gtkbrowser/test.webm";
+    GFile *file;
+    GFileInputStream *stream;
+    GError *err = NULL;
+    gsize stream_length = 2165175;
 
-    gchar *contents;
-    contents = g_strdup_printf ("<html><body><p>Example html page</p></body></html>");
-    stream_length = strlen (contents);
-    stream = g_memory_input_stream_new_from_data (contents, stream_length, g_free);
+    file = g_file_new_for_path (path);
+    stream = g_file_read (file, NULL, &err);
 
-    webkit_uri_scheme_request_finish (request, stream, stream_length, "text/html");
+    if (err != NULL)
+    {
+        g_error ("Could not open %s for reading: %s\n", path, err->message);
+        g_error_free (err);
+    }
+
+    webkit_uri_scheme_request_finish (request, G_INPUT_STREAM(stream), stream_length, "video/webm");
     g_object_unref (stream);
 }
 
 int main(int argc, char* argv[])
 {
     gtk_init(&argc, &argv);
-    gchar *url = "gtk://index.html";
-    if (argc == 2) url = argv[1];
+    gchar *url = "gtk://test_video.mp4";
 
     WebKitWebContext *ctx;
     ctx = webkit_web_context_new();
@@ -38,11 +45,14 @@ int main(int argc, char* argv[])
 
     GtkWidget *win;
     WebKitWebView *web;
+    WebKitSettings *settings; 
 
     win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_default_size(GTK_WINDOW(win), 1200, 800);
 
     web = WEBKIT_WEB_VIEW(webkit_web_view_new_with_context(ctx));
+    settings = webkit_web_view_get_settings(web);
+    webkit_settings_set_enable_developer_extras(settings, true);
 
     gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(web));
 
